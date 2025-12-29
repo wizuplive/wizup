@@ -1,0 +1,169 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WIZUP — The Protocol for Belonging</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --accent: #a855f7;
+        --glass: rgba(255, 255, 255, 0.02);
+        --border: rgba(255, 255, 255, 0.08);
+      }
+      
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      ::selection {
+        background-color: var(--accent);
+        color: white;
+      }
+      
+      html {
+        scroll-behavior: smooth;
+        background-color: #000;
+      }
+      
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #000;
+        color: #fff;
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+      
+      ::-webkit-scrollbar {
+        width: 0px;
+      }
+      
+      .glass {
+        background: var(--glass);
+        backdrop-filter: blur(40px);
+        -webkit-backdrop-filter: blur(40px);
+        border: 1px solid var(--border);
+      }
+
+      .text-balance {
+        text-wrap: balance;
+      }
+
+      @keyframes aurora {
+        0% { transform: translate(-10%, -10%) scale(1); opacity: 0.3; }
+        50% { transform: translate(10%, 5%) scale(1.1); opacity: 0.5; }
+        100% { transform: translate(-5%, 15%) scale(1); opacity: 0.3; }
+      }
+
+      .aurora-bg {
+        filter: blur(140px);
+        animation: aurora 25s ease-in-out infinite alternate;
+      }
+
+      .noise-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url('https://grainy-gradients.vercel.app/noise.svg');
+        opacity: 0.04;
+        pointer-events: none;
+        z-index: 9999;
+        mix-blend-mode: overlay;
+      }
+
+      .gradient-text {
+        background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0.4) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .premium-shadow {
+        box-shadow: 0 0 80px -20px rgba(139, 92, 246, 0.15);
+      }
+
+      @keyframes scroll-left {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+      }
+
+      .animate-scroll-left {
+        animation: scroll-left 60s linear infinite;
+      }
+
+      @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+        100% { transform: translateY(0px); }
+      }
+
+      .animate-float {
+        animation: float 6s ease-in-out infinite;
+      }
+
+      @keyframes presence-pulse {
+        0% { transform: scale(1); opacity: 0.5; }
+        50% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(1); opacity: 0.5; }
+      }
+
+      .animate-presence-pulse {
+        animation: presence-pulse 3s ease-in-out infinite;
+      }
+
+      @keyframes aura-shimmer {
+        0% { filter: hue-rotate(0deg) brightness(1); }
+        50% { filter: hue-rotate(180deg) brightness(1.2); }
+        100% { filter: hue-rotate(360deg) brightness(1); }
+      }
+
+      .aura-shimmer:hover {
+        animation: aura-shimmer 2s linear infinite;
+      }
+
+      .ease-cinematic {
+        transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .perspective-1000 {
+        perspective: 1000px;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.0.0",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "react/jsx-runtime": "https://esm.sh/react@19.0.0/jsx-runtime",
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react",
+    "framer-motion": "https://esm.sh/framer-motion@11.11.17?external=react,react-dom",
+    "zustand": "https://esm.sh/zustand@5.0.1?external=react,react-dom",
+    "@tanstack/react-query": "https://esm.sh/@tanstack/react-query@5.59.20?external=react,react-dom",
+    "@google/genai": "https://esm.sh/@google/genai@1.3.0",
+    "firebase/app": "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js",
+    "firebase/functions": "https://www.gstatic.com/firebasejs/11.0.1/firebase-functions.js",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div class="noise-overlay"></div>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+mutation CreateDemoData @transaction @auth(level: PUBLIC, insecureReason: "This mutation is for demo purposes and does not contain sensitive data.") {
+  user_insertMany(data: [
+    {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      username: "demouser1",
+      email: "demouser1@example.com",
+      createdAt: "2024-04-26T12:00:00Z",
+      displayName: "Demo User One"
+    },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      username: "demouser2",
+      email: "demouser2@example.com",
+      createdAt: "2024-04-26T13:00:00Z",
+      displayName: "Demo User Two"
+    }
+  ])
+  community_insertMany(data: [
+    {
+      id: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      name: "Demo Community 1",
+      slug: "demo-community-1",
+      createdAt: "2024-04-26T14:00:00Z",
+      creatorId: "550e8400-e29b-41d4-a716-446655440000"
+    },
+    {
+      id: "b2c3d4e5-f6a7-8901-2345-67890abcdef0",
+      name: "Demo Community 2",
+      slug: "demo-community-2",
+      createdAt: "2024-04-26T15:00:00Z",
+      creatorId: "550e8400-e29b-41d4-a716-446655440001"
+    }
+  ])
+  post_insertMany(data: [
+    {
+      id: "c3d4e5f6-a7b8-9012-3456-7890abcdef01",
+      title: "Demo Post 1",
+      content: "This is the first demo post.",
+      createdAt: "2024-04-26T16:00:00Z",
+      authorId: "550e8400-e29b-41d4-a716-446655440000",
+      communityId: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+    },
+    {
+      id: "d4e5f6a7-b8c9-0123-4567-890abcdef012",
+      title: "Demo Post 2",
+      content: "This is the second demo post.",
+      createdAt: "2024-04-26T17:00:00Z",
+      authorId: "550e8400-e29b-41d4-a716-446655440001",
+      communityId: "b2c3d4e5-f6a7-8901-2345-67890abcdef0"
+    }
+  ])
+   comment_insertMany(data: [
+    {
+      id: "e5f6a7b8-c9d0-1234-5678-90abcdef0123",
+      text: "Demo comment from demouser1",
+      createdAt: "2024-04-26T18:00:00Z",
+      authorId: "550e8400-e29b-41d4-a716-446655440000",
+      postId: "c3d4e5f6-a7b8-9012-3456-7890abcdef01"
+    },
+    {
+      id: "f6a7b8c9-d0e1-2345-6789-0abcdef01234",
+      text: "Demo comment from demouser2",
+      createdAt: "2024-04-26T19:00:00Z",
+      authorId: "550e8400-e29b-41d4-a716-446655440001",
+      postId: "d4e5f6a7-b8c9-0123-4567-890abcdef012"
+    }
+  ])
+    membership_insertMany(data: [
+    {
+      userId: "550e8400-e29b-41d4-a716-446655440000",
+      communityId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      joinedAt: "2024-04-26T20:00:00Z",
+      role: "admin"
+    },
+    {
+      userId: "550e8400-e29b-41d4-a716-446655440001",
+      communityId: "b2c3d4e5-f6a7-8901-2345-67890abcdef0",
+      joinedAt: "2024-04-26T21:00:00Z",
+      role: "member"
+    }
+  ])
+}

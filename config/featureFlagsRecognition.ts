@@ -1,0 +1,6 @@
+export const RECOGNITION_FLAGS = {
+  ZAPS_RECOGNITION_SURFACES: true,
+  ZAPS_TOASTS: true,
+  ZAPS_INBOX: true,
+  ZAPS_RECOG_FROM_SIM: true,
+};

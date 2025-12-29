@@ -1,0 +1,326 @@
+
+import React, { useState, useEffect } from 'react';
+import { X, ShieldCheck, AlertTriangle, Eye, ChevronDown, ChevronUp, Check, Info, Siren, CornerDownRight, BookOpen, Lightbulb } from 'lucide-react';
+import { ModCase, CaseStatus, SuggestedAction, ModAction, EscalationLane, ConsensusAnalysis } from '../../types/modTypes';
+import { modCaseService } from '../../services/modCaseService';
+import { feedService } from '../../services/feedService';
+import { Post } from '../../types';
+import { motion, AnimatePresence } from 'framer-motion';
+import { agentMemoryService } from '../../services/agentMemoryService';
+import { PLAYBOOKS } from '../../config/moderationPlaybooks';
+import { sovereignReasoningService } from '../../services/sovereignReasoningService';
+import SovereignReasoningPanel from './SovereignReasoningPanel';
+import ConsensusStrip from './ConsensusStrip'; // V4 Import
+import { modPolicyService } from '../../services/modPolicyService';
+
+interface ModCaseDrawerProps {
+  modCase: ModCase;
+  content: Post | null;
+  onClose: () => void;
+  onResolve: () => void;
+}
+
+const ModCaseDrawer: React.FC<ModCaseDrawerProps> = ({ modCase, content, onClose, onResolve }) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showEvidence, setShowEvidence] = useState(false);
+  const [showPlaybook, setShowPlaybook] = useState(false);
+  const [reasoningArtifact, setReasoningArtifact] = useState<any>(null);
+  const [consensusAnalysis, setConsensusAnalysis] = useState<ConsensusAnalysis | null>(null);
+
+  // Default to NORMAL if lane is missing
+  const activeLane = modCase.escalation?.lane || EscalationLane.NORMAL_REVIEW;
+  const playbook = PLAYBOOKS[activeLane];
+
+  useEffect(() => {
+    const loadReasoning = async () => {
+        // We fetch the compiled policy to give the reasoning service full context
+        const policy = await modPolicyService.getCompiled(modCase.communityId);
+        
+        const artifact = sovereignReasoningService.buildReasoning(modCase, policy);
+        setReasoningArtifact(artifact);
+
+        // V4: Generate Consensus Analysis
+        const consensus = sovereignReasoningService.analyzeConsensus(modCase);
+        setConsensusAnalysis(consensus);
+    };
+    loadReasoning();
+  }, [modCase]);
+
+  const handleAction = async (decision: 'APPROVE' | 'DISMISS') => {
+    setIsProcessing(true);
+    
+    // 1. Determine Action Record
+    const actionType = decision === 'APPROVE' ? modCase.suggestedAction : 'NO_ACTION';
+    
+    const actionRecord: ModAction = {
+        id: crypto.randomUUID(),
+        caseId: modCase.id,
+        communityId: modCase.communityId,
+        contentId: modCase.contentId,
+        action: actionType,
+        actor: 'CREATOR',
+        rationale: decision === 'DISMISS' ? 'Dismissed by creator' : undefined,
+        timestamp: Date.now()
+    };
+
+    // 2. Mutate Post Content (ONLY if Approved)
+    if (decision === 'APPROVE') {
+        await feedService.applyModeration(
+            modCase.communityId,
+            modCase.contentId,
+            modCase.suggestedAction,
+            modCase.rationale
+        );
+        agentMemoryService.recordEvent(modCase.communityId, 'HUMAN_CONFIRM', modCase.contentId);
+    } else {
+        agentMemoryService.recordEvent(modCase.communityId, 'HUMAN_RESTORE', modCase.contentId);
+    }
+
+    // 3. Update Case Status
+    const nextStatus = decision === 'APPROVE' ? CaseStatus.RESOLVED : CaseStatus.DISMISSED;
+    
+    const updatedCase: ModCase = {
+        ...modCase,
+        status: nextStatus,
+        decidedBy: 'HUMAN',
+        updatedAt: Date.now()
+    };
+
+    // 4. Persist Changes
+    await Promise.all([
+        modCaseService.addAction(modCase.communityId, actionRecord),
+        modCaseService.upsertCase(modCase.communityId, updatedCase)
+    ]);
+
+    // 5. Resolve UI
+    onResolve();
+    setIsProcessing(false);
+  };
+
+  // V4 Visual Language: Muted Amber for Escalation, no red alarms
+  const isEscalated = consensusAnalysis?.status === 'CONTESTED' || consensusAnalysis?.status === 'UNCERTAIN';
+  
+  const drawerBorderClass = isEscalated ? 'border-l-4 border-l-amber-600/50' : '';
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className={`h-full flex flex-col relative bg-[#050505] ${drawerBorderClass}`}
+    >
+       {/* HEADER */}
+       <div className="p-8 border-b border-white/5 flex justify-between items-start shrink-0">
+          <div>
+             <h2 className="text-xl font-bold text-white mb-1">
+               {isEscalated ? "Decision Required" : "Review Suggestion"}
+             </h2>
+             <div className="flex items-center gap-2 text-xs text-gray-500">
+                <SparklesIcon size={12} className={isEscalated ? "text-amber-400" : "text-purple-400"} />
+                <span>
+                   {isEscalated ? "Escalated for human judgment" : "Generated by AI Mod"}
+                </span>
+             </div>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+            <X size={20} />
+          </button>
+       </div>
+
+       {/* SCROLLABLE BODY */}
+       <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+          
+          {/* V4: CONSENSUS STRIP (Primary Innovation) */}
+          {consensusAnalysis && <ConsensusStrip analysis={consensusAnalysis} />}
+
+          {/* 1. CONTENT PREVIEW (ReadOnly Card) */}
+          <div>
+             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 block">Content Preview</label>
+             {content ? (
+                 <div className="bg-[#0F0F0F] rounded-2xl border border-white/10 p-6 opacity-90 select-none pointer-events-none">
+                    <div className="flex items-center gap-3 mb-4">
+                       <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden">
+                          <img src={content.author.avatar} className="w-full h-full object-cover" alt="" />
+                       </div>
+                       <div>
+                          <div className="text-sm font-bold text-gray-300">{content.author.name}</div>
+                          <div className="text-[10px] text-gray-600">{content.time}</div>
+                       </div>
+                    </div>
+                    <p className="text-sm text-gray-300 leading-relaxed mb-4">{content.content}</p>
+                    {content.image && (
+                       <div className="rounded-lg overflow-hidden border border-white/5 h-48 w-full bg-black">
+                          <img src={content.image} className="w-full h-full object-cover opacity-80" alt="" />
+                       </div>
+                    )}
+                 </div>
+             ) : (
+                 <div className="p-8 rounded-2xl border border-white/5 border-dashed text-center text-gray-600 text-xs">
+                    Content unavailable or deleted.
+                 </div>
+             )}
+          </div>
+
+          {/* 2. SUGGESTED ACTION */}
+          <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
+             <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-lg bg-white/10 text-white">
+                   <ShieldCheck size={18} />
+                </div>
+                <div>
+                   <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Suggested Action</div>
+                   <div className="text-base font-bold text-white">
+                      {modCase.suggestedAction === SuggestedAction.HOLD ? 'Hide this content' : 
+                       modCase.suggestedAction === SuggestedAction.NOTE ? 'Add warning label' : 
+                       modCase.suggestedAction === SuggestedAction.TAG ? 'Tag for review' : 'No Action'}
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          {/* 3. ESCALATION ROUTING INFO (Phase 4) - Simplified Visuals */}
+          {modCase.escalation && modCase.escalation.lane !== EscalationLane.NORMAL_REVIEW && (
+              <div className="pt-2 text-xs text-gray-500 italic">
+                  Routed via {modCase.escalation.lane.replace('_', ' ').toLowerCase()} due to {modCase.escalation.urgency.toLowerCase()} urgency signals.
+              </div>
+          )}
+
+          {/* 4. GUIDANCE PLAYBOOK (Phase 4) */}
+          <div className="border-t border-white/5 pt-4">
+             <button 
+               onClick={() => setShowPlaybook(!showPlaybook)}
+               className="flex items-center justify-between w-full text-left group mb-2"
+             >
+                <div className="flex items-center gap-2">
+                    <BookOpen size={14} className="text-gray-500" />
+                    <span className="text-xs font-bold text-gray-500 group-hover:text-white transition-colors">Review Guidance</span>
+                </div>
+                {showPlaybook ? <ChevronUp size={14} className="text-gray-600" /> : <ChevronDown size={14} className="text-gray-600" />}
+             </button>
+             
+             <AnimatePresence>
+                {showPlaybook && (
+                   <motion.div 
+                     initial={{ height: 0, opacity: 0 }}
+                     animate={{ height: "auto", opacity: 1 }}
+                     exit={{ height: 0, opacity: 0 }}
+                     className="overflow-hidden"
+                   >
+                      <div className="pt-2 pb-4 px-4 bg-white/[0.02] border border-white/5 rounded-xl mt-2">
+                         <div className="mb-3">
+                             <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{playbook.title}</h4>
+                             <p className="text-xs text-gray-300 leading-relaxed">{playbook.intent}</p>
+                         </div>
+                         
+                         <div className="flex items-start gap-2 mb-3">
+                             <Lightbulb size={12} className="text-yellow-500/50 mt-0.5 shrink-0" />
+                             <p className="text-xs text-gray-300 italic">{playbook.guidance}</p>
+                         </div>
+
+                         <div className="space-y-1">
+                             <span className="text-[9px] font-bold text-gray-600 uppercase">Considerations:</span>
+                             <ul className="text-xs text-gray-400 space-y-1 list-disc pl-4">
+                                {playbook.considerations.map((c, i) => (
+                                    <li key={i}>{c}</li>
+                                ))}
+                             </ul>
+                         </div>
+                      </div>
+                   </motion.div>
+                )}
+             </AnimatePresence>
+          </div>
+
+          {/* 5. SOVEREIGN REASONING (New) */}
+          {reasoningArtifact && <SovereignReasoningPanel artifact={reasoningArtifact} />}
+
+          {/* 6. RATIONALE (Collapsible) */}
+          <div className="border-t border-white/5 pt-4">
+             <button 
+               onClick={() => setShowEvidence(!showEvidence)}
+               className="flex items-center justify-between w-full text-left group"
+             >
+                <span className="text-xs font-bold text-gray-500 group-hover:text-white transition-colors">Why this was suggested</span>
+                {showEvidence ? <ChevronUp size={14} className="text-gray-600" /> : <ChevronDown size={14} className="text-gray-600" />}
+             </button>
+             
+             <AnimatePresence>
+                {showEvidence && (
+                   <motion.div 
+                     initial={{ height: 0, opacity: 0 }}
+                     animate={{ height: "auto", opacity: 1 }}
+                     exit={{ height: 0, opacity: 0 }}
+                     className="overflow-hidden"
+                   >
+                      <div className="pt-4 pb-2 space-y-3">
+                         <p className="text-sm text-gray-300 leading-relaxed">
+                            {modCase.rationale}
+                         </p>
+                         
+                         {/* Bullet Evidence */}
+                         {modCase.evidence.length > 0 && (
+                            <ul className="space-y-2">
+                               {modCase.evidence.map((ev, i) => (
+                                  <li key={i} className="flex items-start gap-2 text-xs text-gray-400">
+                                     <CornerDownRight size={10} className="mt-1 shrink-0 opacity-50" />
+                                     {ev}
+                                  </li>
+                               ))}
+                            </ul>
+                         )}
+                      </div>
+                   </motion.div>
+                )}
+             </AnimatePresence>
+          </div>
+
+       </div>
+
+       {/* FOOTER ACTIONS */}
+       <div className="p-8 border-t border-white/5 bg-[#0A0A0A] flex flex-col gap-4 shrink-0">
+          <div className="flex gap-4">
+             <button 
+               onClick={() => handleAction('DISMISS')}
+               disabled={isProcessing}
+               className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 text-gray-400 hover:text-white text-xs font-bold transition-colors"
+             >
+                Dismiss
+             </button>
+             <button 
+               onClick={() => handleAction('APPROVE')}
+               disabled={isProcessing}
+               className={`flex-1 py-3 rounded-xl text-black text-xs font-bold transition-colors shadow-lg ${
+                   isEscalated ? 'bg-amber-500 hover:bg-amber-400' : 'bg-white hover:bg-gray-200'
+               }`}
+             >
+                {isEscalated ? 'Decide' : 'Approve'}
+             </button>
+          </div>
+          <p className="text-[10px] text-gray-600 text-center">
+             Actions are recorded in the moderation log.
+          </p>
+       </div>
+
+    </motion.div>
+  );
+};
+
+// Helper Icon
+const SparklesIcon = ({ size, className }: { size: number, className: string }) => (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      className={className}
+    >
+      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+    </svg>
+);
+
+export default ModCaseDrawer;

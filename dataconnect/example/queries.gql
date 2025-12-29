@@ -1,0 +1,55 @@
+mutation CreateCommunity($name: String!, $slug: String!, $description: String!, $rules: String!, $welcomeMessage: String!, $bannerImageURL: String) @auth(level: USER) {
+  community_insert(data: {
+    name: $name,
+    slug: $slug,
+    description: $description,
+    rules: $rules,
+    welcomeMessage: $welcomeMessage,
+    bannerImageURL: $bannerImageURL,
+    creatorId_expr: "auth.uid"
+  })
+}
+
+query GetCommunityBySlug($slug: String!) @auth(level: PUBLIC, insecureReason: "This query is safe to expose to the public") {
+  communities(where: {slug: {eq: $slug}}) {
+    id
+    name
+    description
+    rules
+    welcomeMessage
+    bannerImageURL
+    creator {
+      id
+      username
+      displayName
+      profilePictureURL
+    }
+  }
+}
+
+mutation CreatePost($communityId: UUID!, $title: String, $content: String!, $mediaURL: String, $postType: String) @auth(level: USER) {
+  post_insert(data: {
+    communityId: $communityId,
+    title: $title,
+    content: $content,
+    mediaURL: $mediaURL,
+    postType: $postType,
+    authorId_expr: "auth.uid"
+  })
+}
+
+query ListPostsByCommunity($communityId: UUID!) @auth(level: PUBLIC, insecureReason: "This query is safe to expose to the public") {
+  posts(where: {communityId: {eq: $communityId}}) {
+    id
+    title
+    content
+    mediaURL
+    postType
+    author {
+      id
+      username
+      displayName
+      profilePictureURL
+    }
+  }
+}
