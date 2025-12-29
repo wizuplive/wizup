@@ -35,7 +35,7 @@ const EnduranceSection: React.FC = () => {
         >
           Trust is<br />
           <span className="text-white/10 font-light italic">lasting.</span>
-        </h2 >
+        </motion.h2>
 
         <motion.p 
           initial={{ opacity: 0 }}
