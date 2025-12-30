@@ -1,6 +1,6 @@
 
 import { ZapsSignalEvent } from "./types/zapsSignals.types";
-import { zapsSignalLog } from "./logs/zapsSignalLog";
+import { zapsSignalLog } from "./signalLogs/zapsSignalLog";
 import { recognitionService } from "../recognition/recognitionService";
 import { joinToEarnService } from "../zapsRecognition/joinToEarn/joinToEarnService";
 import { recognitionLedger } from "../zapsLedger/recognitionLedger";
